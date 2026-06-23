@@ -24,13 +24,7 @@
 | [Term 1] | [Definition] |
 | [Term 2] | [Definition] |
 
-### 3. Business Rules Summary
 
-| Rule Code | Description | Condition |
-|-----------|-------------|-----------|
-| BR-1 | [Rule description] | [When/if condition] |
-
----
 
 ## II. Requirements
 
@@ -42,10 +36,17 @@
 
 #### 1.2. Data Description
 
-| No. | Field | Data Type | Description |
-|-----|-------|-----------|-------------|
-| 1 | [field_name] | string / number / datetime / boolean / enum | [What it represents, format, computation logic] |
-| 2 | | | |
+> **Option 1: Standard Data Description** (Use for standard CRUD APIs)
+| No. | Field | Data Type | Description | Update Triggers |
+|-----|-------|-----------|-------------|-----------------|
+| 1 | [field_name] | string / number / datetime / boolean / enum | [What it represents, format, computation logic] | [Events that update this field] |
+| 2 | | | | |
+
+> **Option 2: Combined Data Description & Metric Implementation** (Use for analytical/dashboard APIs returning computed metrics)
+| # | Metric | Included in response? | Data Type | Calculation Formula / Description | Update Triggers | Notes / Dependencies |
+|---|--------|-----------------------|-----------|-----------------------------------|-----------------|----------------------|
+| 1 | `[field_name]` | ✅ | `string / number` | [What it represents, computation logic] | [Events that update this field] | [Dependencies e.g. Requires SCR-xxx] |
+| 2 | `[internal_field]` | ❌ (internal) | `number` | `SUM([field])` | [Events that update this field] | [Internal metric used for calculations] |
 
 #### 1.3. Use Cases
 
@@ -59,7 +60,7 @@
 | **Pre-condition(s)** | [Required state before execution] |
 | **Post-condition(s)** | [Expected state after execution] |
 
-**Activity Flow & Business Rules**:
+**Activity Flow & Business Rules** *(only when the UC involves user interaction; omit for fully system-triggered/automated flows)*:
 
 > Each step is a short action name. The corresponding BR code describes the detailed logic, validations, transformations, and side effects for that step.
 
@@ -120,7 +121,15 @@ _(Repeat the same structure: Overview → Data Description → Use Cases (with H
 
 ---
 
-## III. Data Model
+## III. Business Rules Summary
+
+| Rule Code | Description | Condition |
+|-----------|-------------|-----------|
+| BR-1 | [Rule description] | [When/if condition] |
+
+---
+
+## IV. Data Model
 
 ### Entity: [Entity Name]
 
@@ -141,7 +150,7 @@ _(Repeat the same structure: Overview → Data Description → Use Cases (with H
 
 ---
 
-## IV. Notifications / Side Effects
+## V. Notifications / Side Effects
 
 | # | Trigger Event | Channel | Template | Recipient | Description |
 |---|--------------|---------|----------|-----------|-------------|
@@ -150,7 +159,7 @@ _(Repeat the same structure: Overview → Data Description → Use Cases (with H
 
 ---
 
-## V. Permissions & Access Control
+## VI. Permissions & Access Control
 
 > **Authentication required by default.** All endpoints are authenticated. Add an `Anonymous` column only when an action explicitly allows unauthenticated access, and document the rationale.
 

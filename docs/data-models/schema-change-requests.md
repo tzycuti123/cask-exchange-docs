@@ -4,11 +4,78 @@ This document tracks requested additions or modifications to the backend data mo
 
 ---
 
+## SCR-003 — Enrich Classification Schema
+
+| Item | Detail |
+|------|--------|
+| **Status** | 🟡 Pending |
+| **Requested by** | User |
+| **Date** | 12/06/2026 |
+| **Required for** | Browse by Category and proper classification data |
+
+### Problem
+
+The current classification schema is a simple list of `{ "value": "single_malt_scotch", "label": "Single Malt Scotch" }`. Previously, we didn't have images for classifications at all. We need a way to natively attach an image to each classification to support the new category card UI.
+
+### Requested Change
+
+Upgrade the current classification schema to support a single-level structure enriched with an image URL. The endpoint `GET /api/cask-metadata/classifications` (and the underlying DB representation) should return:
+
+```json
+{
+  "classification": "single_malt",
+  "classificationLabel": "Single Malt",
+  "imageUrl": "https://..."
+}
+```
+
+| Field | Type | Update Trigger | Description |
+|-------|------|----------------|-------------|
+| `imageUrl` | `string \| null` | Admin uploads/updates classification image | Representative image for this classification |
+
+### Impact
+
+| Scope | Change |
+|-------|--------|
+| `GET /api/cask-metadata/classifications` | Must return the new enriched schema. |
+| Entity: `MasterCask` | No change needed for this specific SCR. |
+| Entity: `ClassificationMetadata` | The proposed separate metadata entity ([classification-metadata-admin.md](../browse-by-category/classification-metadata-admin.md)) is no longer needed, as `imageUrl` is now natively supported. |
+| Browse by Category API | Update API logic to use the enriched `classification` schema. |
+
+---
+
+## SCR-004 — Add `peatLevels` to Master Cask
+
+| Item | Detail |
+|------|--------|
+| **Status** | 🟡 Pending |
+| **Requested by** | User |
+| **Date** | 19/06/2026 |
+| **Required for** | Storing peat levels natively on Master Casks to support product filtering and details. |
+
+### Problem
+We need to track peat levels (e.g. Unpeated, Lightly Peated, Peated, Heavily Peated) for whisky casks. Since this is specific to the cask itself rather than the broader classification, both `categoryLabel` (for custom UI display names) and `peatLevels` need to be maintained directly on the `MasterCask` entity.
+
+### Requested Change
+Add a `peatLevels` field to the `MasterCask` entity to track the peat level.
+
+| Field | Type | Update Trigger | Description |
+|-------|------|----------------|-------------|
+| `peatLevels` | `string` (enum) | Master Cask created/updated | Peat level (e.g., `unpeated`, `lightly_peated`, `peated`, `heavily_peated`) |
+
+### Impact
+
+| Scope | Change |
+|-------|--------|
+| `/cask-masters/` APIs | Update the APIs to accept and return the new `peatLevels` field if needed. |
+
+---
+
 ## SCR-001 — Add `completedAt` to `CheckoutSession`
 
 | Item | Detail |
 |------|--------|
-| **Status** | 🟡 Pending BE confirmation |
+| **Status** | 🟢 Completed |
 | **Requested by** | Alice |
 | **Date** | 07/05/2026 |
 | **Required for** | Top Distilleries (home page), and potentially any future feature computing 30-day volume windows |
@@ -73,7 +140,7 @@ This replaces the interim workaround of using `cs.ownershipTransferredAt`.
 
 | Item | Detail |
 |------|--------|
-| **Status** | 🟢 Approved |
+| **Status** | 🟢 Completed |
 | **Requested by** | Alice |
 | **Date** | 07/05/2026 |
 | **Required for** | Top Distilleries (ranking logic), and Admin "Unpublish" feature |

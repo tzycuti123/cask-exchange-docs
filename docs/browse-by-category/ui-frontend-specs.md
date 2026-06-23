@@ -7,7 +7,8 @@ Browse by Category – Home Page Curated List
 | Version | Summary of changes | Updated by | Date |
 | --- | --- | --- | --- |
 | 0.1 | Creation | Alice | 08/06/2026 |
-| 0.2 | Corrected display label field: card shows `categoryLabel` ("Single Malt"), not `classificationLabel` ("Single Malt Scotch"). Navigation uses `classification` slug. | Alice | 08/06/2026 |
+| 0.2 | Corrected display label field: card shows `categoryLabel` ("Single Malt"), not `classificationLabel` ("Single Malt Scotch"). Navigation uses `classification` value. | Alice | 08/06/2026 |
+| 0.3 | Updated to use `classificationLabel` from hierarchical Classification schema instead of `categoryLabel` (SCR-003). | Alice | 12/06/2026 |
 
 ---
 
@@ -34,7 +35,7 @@ The **Browse by Category** section appears on the Home page as a horizontally sc
 | 3 | Right Carousel Arrow | Button (Icon) | Scrolls the carousel to the right | Default, Hover, Disabled (when at end) |
 | 4 | Category Card | Card | Container for each classification's data. Clickable to navigate to filtered browse page | Default, Hover, Active |
 | 5 | Category Image | Image | Decorative cask/whisky image representing the classification | Loaded, Fallback/Placeholder |
-| 6 | Category Label | Text | Short, user-facing classification name displayed on the card (e.g., "Single Malt"). Sourced from `categoryLabel` on the Master Cask entity. | Static |
+| 6 | Category Label | Text | Short, user-facing classification name displayed on the card (e.g., "Single Malt"). Sourced from `classificationLabel` on the Classification entity (SCR-003). | Static |
 | 7 | Trending Badge | Badge | Labeled "Trending". Displayed conditionally based on the Trending metric formula | Visible, Hidden |
 | 8 | Median Price Label | Text | Static label: "Med. Price" | Static |
 | 9 | Median Price Value | Text | Formatted median transaction price (e.g., "£12,000"). Falls back to `estMedianPrice` if no transactions. | Has Value, Null/Empty (shows "—") |
@@ -59,7 +60,7 @@ Each card contains:
 | Sub-Component | Source Field | Display Rule |
 |---|---|---|
 | Category Image | Platform-provided or classification default image | If no image available, show a generic cask placeholder |
-| Category Label | `categoryLabel` | Always shown. Short display name (e.g., "Single Malt"). Not to be confused with `classificationLabel` ("Single Malt Scotch") which is the longer internal name. |
+| Category Label | `classificationLabel` | Always shown. Short display name for the parent category (e.g., "Single Malt"). Sourced natively from Classification schema (SCR-003). |
 | Trending Badge | Derived from `isTrending` flag in API response | Shown only when `isTrending = true` |
 | Median Price | `medianPrice` (real tx) or `estMedianPrice` (cold start) | Show `medianPrice` if not null; else show `estMedianPrice`; else "—" |
 | Price Delta | `medianPriceDelta30D` | Show if not null; positive = green, negative = red, hidden if null |
@@ -116,7 +117,7 @@ This is a **read-only display screen**. No user-input fields are present. No fie
 
 | # | Action | Success State |
 |---|---|---|
-| 1 | Render Carousel | FE iterates over the response array. For each classification:<br>1. Render a **Category Card**.<br>2. Set image `src` to `classificationImageUrl` (or fallback).<br>3. Display `categoryLabel`.<br>4. Display Trending badge if `isTrending = true`.<br>5. Format and display `medianPrice` (or `estMedianPrice`).<br>6. Render Price Delta Badge. | UI renders cards in order |
+| 1 | Render Carousel | FE iterates over the response array. For each classification:<br>1. Render a **Category Card**.<br>2. Set image `src` to `classificationImageUrl` (or fallback).<br>3. Display `classificationLabel`.<br>4. Display Trending badge if `isTrending = true`.<br>5. Format and display `medianPrice` (or `estMedianPrice`).<br>6. Render Price Delta Badge. | UI renders cards in order |
 
 - Cards are ordered as returned by the API (server determines sort order — by `lifetimeVolume DESC`, cold-start fill-in by `estMarketValue DESC`).
 - Carousel arrows are enabled if content overflows the visible area.
@@ -126,7 +127,7 @@ This is a **read-only display screen**. No user-input fields are present. No fie
 
 | API Field | UI Component |
 |---|---|
-| `categoryLabel` | Category Label (card display name) |
+| `classificationLabel` | Category Label (card display name) |
 | `isTrending` | Trending Badge visibility |
 | `medianPrice` (non-null) | Median Price Value |
 | `estMedianPrice` (fallback) | Median Price Value (when `medianPrice` is null) |
@@ -157,8 +158,8 @@ This is a **read-only display screen**. No user-input fields are present. No fie
 #### Behavior
 
 - Navigate to the Cask Browse/Listing page pre-filtered by the selected classification.
-- **URL**: `/casks?classification={classificationSlug}` (or equivalent browse URL pattern)
-- The classification filter is passed as a query parameter using the `classification` slug (e.g., `single_malt_scotch`).
+- **URL**: `/casks?classification={classificationValue}` (or equivalent browse URL pattern)
+- The classification filter is passed as a query parameter using the `classification` value (e.g., `single_malt_scotch`).
 - No loading indicator needed on the card itself; browser page navigation handles it.
 
 ---
@@ -200,7 +201,7 @@ This is a **read-only display screen**. No user-input fields are present. No fie
 
 | Action | Destination | URL Change | Notes |
 |---|---|---|---|
-| Click Category Card | Cask Browse / Listing page | `/casks?classification={slug}` | `slug` is the `classification` value (e.g., `single_malt_scotch`) |
+| Click Category Card | Cask Browse / Listing page | `/casks?classification={value}` | `value` is the `classification` value (e.g., `single_malt_scotch`) |
 | Click Home Logo | Home page | `/` | Section reloads |
 
 ---

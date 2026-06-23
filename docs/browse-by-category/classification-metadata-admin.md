@@ -2,6 +2,9 @@
 
 Classification Metadata — Admin Management
 
+> [!WARNING] 
+> **DEPRECATED via SCR-003**: The `ClassificationMetadata` entity is being merged directly into the core `Classification` management schema, which now natively supports `imageUrl`. The specs below reflect the legacy workaround and should be considered superseded by the unified Classification schema.
+
 ## Document Version Control
 
 | Version | Summary of changes | Updated by | Date |
@@ -27,21 +30,21 @@ Classification Metadata — Admin Management
 
 | Term | Definition |
 |------|------------|
-| Classification (slug) | The enum-like string identifying a category (e.g., `single_malt_scotch`). Derived from `MasterCask.classification`. Source of truth: `GET /api/cask-metadata/classifications`. |
-| `categoryLabel` | Short, user-facing display name for the category (e.g., "Single Malt"). Lives on the `MasterCask` entity. All master casks sharing a classification have the same `categoryLabel`. |
+| Classification (value) | The enum-like string identifying a category (e.g., `single_malt_scotch`). Derived from `MasterCask.classification`. Source of truth: `GET /api/cask-metadata/classifications`. |
+| Category Label | The short label displayed on the Category Card (e.g., `Single Malt`). Replaces the generic `classificationLabel`. |
+| Classification Metadata | Admin-managed configuration record for a classification, keyed by the `classification` value. |
 | `classificationLabel` | Longer, more specific display name (e.g., "Single Malt Scotch"). Not displayed on the Browse by Category card; used in other product contexts. |
-| Classification Metadata | Admin-managed configuration record for a classification, keyed by the `classification` slug. |
 | `isVisible` | A flag that allows admins to suppress a category from the Browse by Category section without affecting cask data or market stats. |
 
 ### 3. Business Rules Summary
 
 | Rule Code | Description | Condition |
 |-----------|-------------|-----------|
-| **CM-BR-1** | **1:1 mapping** | One `ClassificationMetadata` record per `classification` slug. The slug is the primary key; duplicates are rejected. |
-| **CM-BR-2** | **displayName fallback** | If `displayName` is `null`, the Browse by Category API falls back to `MasterCask.categoryLabel` as the card label. |
-| **CM-BR-3** | **Visibility gate** | If `isVisible = false` for a classification, it MUST be excluded from the `GET /api/categories/browse` response, regardless of its market stats. |
-| **CM-BR-4** | **Image storage** | `classificationImageUrl` must be an S3-hosted URL (same bucket pattern as distillery images). Images are uploaded via multipart form; the backend handles S3 upload and stores the resulting URL. |
-| **CM-BR-5** | **Slug validation** | On create/update, the `classification` slug MUST exist in the active classification enum (`GET /api/cask-metadata/classifications`). Reject unknown slugs with 400. |
+| **CM-BR-1** | **1:1 mapping** | One `ClassificationMetadata` record per `classification` value. The value is the primary key; duplicates are rejected. |
+| **CM-BR-2** | **Merge over overwrite** | Updates to classification metadata should use `PUT` and merge fields. Unprovided optional fields remain unchanged. |
+| **CM-BR-3** | **Visibility** | If `isVisible = false`, the UI suppresses this category card from the Browse by Category list, even if it has matching casks. |
+| **CM-BR-4** | **Label override** | If `displayName` is null/empty, UI falls back to the classification's system `classificationLabel`. |
+| **CM-BR-5** | **Value validation** | On create/update, the `classification` value MUST exist in the active classification enum (`GET /api/cask-metadata/classifications`). Reject unknown values with 400. |
 | **CM-BR-6** | **Stats refresh on metadata change** | Any update to `ClassificationMetadata` (image, visibility, displayName) MUST trigger an async refresh of the `ClassificationVolumeStats` record for that classification, so the Browse by Category API serves fresh data immediately. |
 
 ---
@@ -56,7 +59,7 @@ Classification Metadata — Admin Management
 
 | No. | Field | Data Type | Required | Description |
 |-----|-------|-----------|----------|-------------|
-| 1 | `classification` | string | ✅ | Classification slug (e.g., `single_malt_scotch`). Primary key. Must exist in the classification enum (**CM-BR-5**). |
+| 1 | `classification` | string | ✅ | Classification value (e.g., `single_malt_scotch`). Primary key. Must exist in the classification enum (**CM-BR-5**). |
 | 2 | `classificationImageUrl` | string \| null | ❌ | S3-hosted URL of the category's representative image. Set by the BE after admin uploads via multipart. `null` if no image has been uploaded. |
 | 3 | `displayName` | string \| null | ❌ | Admin override for the card label. If `null`, the Browse by Category API uses `MasterCask.categoryLabel` (**CM-BR-2**). Max 60 chars. |
 | 4 | `isVisible` | boolean | ✅ | Controls visibility in the Browse by Category section (**CM-BR-3**). Default: `true`. |
@@ -72,15 +75,15 @@ Classification Metadata — Admin Management
 | **Objective** | Create a new `ClassificationMetadata` record for a classification that does not yet have one |
 | **Actor** | Admin |
 | **Trigger** | Admin submits the Create Classification Metadata form |
-| **Pre-condition(s)** | The `classification` slug exists in the enum; no existing record for this slug |
+| **Pre-condition(s)** | The `classification` value exists in the enum; no existing record for this value |
 | **Post-condition(s)** | New `ClassificationMetadata` record created; async stats refresh triggered (**CM-BR-6**) |
 
 **Activity Flow & Business Rules:**
 
 | Step | Action | BR Code | Details |
 |------|--------|---------|---------|
-| 1 | Validate slug | CM-BR-5 | Verify `classification` exists in `GET /api/cask-metadata/classifications`. Return 400 if unknown. |
-| 2 | Check uniqueness | CM-BR-1 | Reject if a record already exists for this slug (409 Conflict). |
+| 1 | Validate value | CM-BR-5 | Verify `classification` exists in `GET /api/cask-metadata/classifications`. Return 400 if unknown. |
+| 2 | Check uniqueness | CM-BR-1 | Reject if a record already exists for this value (409 Conflict). |
 | 3 | Upload image (if provided) | CM-BR-4 | Upload image to S3; store resulting URL as `classificationImageUrl`. |
 | 4 | Persist record | — | Insert `ClassificationMetadata` with provided fields. Default `isVisible = true` if not set. |
 | 5 | Trigger stats refresh | CM-BR-6 | Async refresh of `ClassificationVolumeStats` for this classification. |
@@ -90,15 +93,15 @@ Classification Metadata — Admin Management
 
 | # | Scenario | Expected Result |
 |---|----------|----------------|
-| 1 | Valid slug + image uploaded | Record created; image uploaded to S3; URL stored; 201 returned |
-| 2 | Valid slug, no image | Record created with `classificationImageUrl = null`; 201 returned |
+| 1 | Valid value + image uploaded | Record created; image uploaded to S3; URL stored; 201 returned |
+| 2 | Valid value, no image | Record created with `classificationImageUrl = null`; 201 returned |
 
 **Negative Path:**
 
 | # | Scenario | Expected Result | Error Code |
 |---|----------|----------------|------------|
-| 1 | Unknown `classification` slug | Reject | 400 — "Unknown classification" |
-| 2 | Duplicate slug | Reject | 409 — "Category metadata already exists for this classification. Use PUT to update." |
+| 1 | Unknown `classification` value | Reject | 400 — "Unknown classification" |
+| 2 | Duplicate value | Reject | 409 — "Category metadata already exists for this classification. Use PUT to update." |
 | 3 | Unauthenticated | Reject | 401 Unauthorized |
 | 4 | Non-admin role | Reject | 403 Forbidden |
 | 5 | Image upload fails (S3 error) | Reject with error | 500 — "Image upload failed. Please try again." |
@@ -113,14 +116,14 @@ Classification Metadata — Admin Management
 | **Objective** | Update the image, display name, or visibility of an existing `ClassificationMetadata` record |
 | **Actor** | Admin |
 | **Trigger** | Admin submits the Edit Classification Metadata form |
-| **Pre-condition(s)** | A `ClassificationMetadata` record exists for the given `classification` slug |
-| **Post-condition(s)** | Record updated; async stats refresh triggered (**CM-BR-6**) |
+| **Pre-condition(s)** | A `ClassificationMetadata` record exists for the given `classification` value |
+| **Post-condition(s)** | The record is returned to the client |
 
-**Activity Flow & Business Rules:**
+**Activity Flow & Business Rules**:
 
 | Step | Action | BR Code | Details |
 |------|--------|---------|---------|
-| 1 | Look up record | — | Find `ClassificationMetadata` by `classification` slug. Return 404 if not found. |
+| 1 | Look up record | — | Find `ClassificationMetadata` by `classification` value. Return 404 if not found. |
 | 2 | Upload new image (if provided) | CM-BR-4 | If a new image is included in the request, upload to S3; update `classificationImageUrl`. If no image in request, keep existing URL. |
 | 3 | Apply field updates | CM-BR-2, CM-BR-3 | Update `displayName`, `isVisible` as provided. Null `displayName` clears the override (reverts to `categoryLabel` fallback). |
 | 4 | Persist changes | — | Update record; set `updatedAt = NOW()`. |
@@ -171,7 +174,7 @@ Classification Metadata — Admin Management
 
 | Item | Description |
 |------|-------------|
-| **Objective** | Fetch a single `ClassificationMetadata` record by classification slug |
+| **Objective** | Fetch a single `ClassificationMetadata` record by classification value |
 | **Actor** | Admin |
 | **Trigger** | Admin clicks "Edit" on a classification metadata record |
 | **Pre-condition(s)** | Admin is authenticated |
@@ -215,7 +218,7 @@ Classification Metadata — Admin Management
 
 | Field | Type | Description |
 |---|---|---|
-| `classification` | string | (POST only) Classification slug |
+| `classification` | string | (POST only) Classification value |
 | `image` | file \| null | Optional image file. Accepted: `jpg`, `png`, `webp`. Max size: 5 MB. |
 | `displayName` | string \| null | Optional display name override |
 | `isVisible` | boolean | Visibility flag |
@@ -241,7 +244,7 @@ Classification Metadata — Admin Management
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `classification` | string | ✅ | — | Classification slug. Primary key. FK to classification enum. |
+| `classification` | string | ✅ | — | Classification value. Primary key. FK to classification enum. |
 | `classificationImageUrl` | string \| null | ❌ | `null` | S3 URL of the classification image. Set by BE after admin uploads. |
 | `displayName` | string \| null | ❌ | `null` | Admin override for the card label. Falls back to `MasterCask.categoryLabel` if null (**CM-BR-2**). Max 60 chars. |
 | `isVisible` | boolean | ✅ | `true` | Visibility gate for Browse by Category section (**CM-BR-3**). |

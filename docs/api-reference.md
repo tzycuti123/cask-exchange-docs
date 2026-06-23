@@ -121,7 +121,7 @@
 | GET | `/api/cask-metadata/sort` | Get available sort options | Public |
 | GET | `/api/cask-metadata/classifications` | Get supported cask classifications (enum + label) | 🔒 |
 
-> **Key insight for specs**: `classifications` returns both the enum slug (e.g., `single_malt_scotch`) AND the human-readable label (e.g., `Single Malt Scotch`). This confirms that `classificationLabel` is a derived/computed field from the BE, not a separate DB column.
+> **Key insight for specs**: `classifications` returns both the enum value (e.g., `single_malt_scotch`) AND the human-readable label (e.g., `Single Malt Scotch`). This confirms that `classificationLabel` is a derived/computed field from the BE, not a separate DB column.
 
 ---
 
@@ -337,8 +337,8 @@
    - There is **no dedicated `/api/master-casks` endpoint** — master cask interactions happen via variant endpoints.
 
 2. **`classificationLabel` mapping:**
-   - Use `GET /api/cask-metadata/classifications` to understand the slug → label mapping.
-   - The backend returns both `classification` (slug) and `classificationLabel` (display text).
+   - Use `GET /api/cask-metadata/classifications` to understand the value → label mapping.
+   - The backend returns both `classification` (value) and `classificationLabel` (display text).
 
 3. **`region` field:**
    - Region is an **object** (`{ id, name, country, ... }`), not a flat string.

@@ -30,8 +30,9 @@ When the user provides a feature description, screen spec table, or raw requirem
    - Follow the structure from the reference Google Doc: https://docs.google.com/document/d/1vxRACJZrhgMSd-6qXVbakXbZ7c9LeTcq0l__EH2gBfg
    - Fill in ALL sections:
      - **Document Version Control table**: list version 0.1 with creation date and author
-     - **Introduction**: purpose, definitions, business rules
+     - **Introduction**: purpose, definitions
      - **Requirements**: per section — overview (trigger, pre/post conditions), data description, use cases (UC format with BR codes), edge cases
+     - **Business Rules Summary**: consolidated table of all business rules referenced in the document
      - **Data Model**: entity fields, types, status flow / state machine
      - **Notifications / Side Effects**: emails, push notifications triggered
      - **Permissions & Access Control**: role-based access matrix. Default to authenticated users only (❌ for Anonymous). Only add Anonymous ✅ if the feature explicitly allows public access — document the rationale
@@ -47,7 +48,7 @@ The API Requirements document follows the Cask Exchange documentation pattern:
 - **Use Case (UC) Format**: Objective → Actor → Trigger → Pre-conditions → Post-conditions → **Activity Flow & Business Rules** *(only when the UC involves user interaction; omit for fully system-triggered/automated flows)* → Happy/Negative/Edge Cases
 - **Business Rules (BR)**: Coded as `[SECTION]-[NUMBER]` (e.g., SA-1, SA-2)
 - **Edge Cases**: Trigger → Flow → Side Effects (cancel objects, release orders, send emails)
-- **Data Description Tables**: No. → Field → Data Type → Description
+- **Data Description Tables**: Use Option 1 (No. → Field → Data Type → Description → Update Triggers) for standard CRUD APIs, or Option 2 (# → Metric → Included in response? → Data Type → Calculation Formula / Description → Update Triggers → Notes / Dependencies) for analytical endpoints.
 - **Status/State Machines**: Clear status transitions with conditions
 
 ## Notes
@@ -65,7 +66,7 @@ Key rules derived from the live API:
 |-------|------|
 | **Master Cask** | No dedicated `/api/master-casks` endpoint. Master data comes embedded in variant (`/api/casks`) responses via `master` field. New features targeting master casks need new endpoints. |
 | **Region name** | `region` is an **object** (`{ id, name, ... }`), NOT a flat string. Expose as `regionName` (mapped from `region.name`) in new endpoint payloads. |
-| **Classification** | Backend has both `classification` (slug, e.g. `single_malt_scotch`) and `classificationLabel` (display, e.g. `Single Malt Scotch`). Always use `classificationLabel` for display fields. Use `GET /api/cask-metadata/classifications` as source of truth. |
+| **Classification** | Backend has both `classification` (value, e.g. `single_malt_scotch`) and `classificationLabel` (display, e.g. `Single Malt Scotch`). Always use `classificationLabel` for display fields. Use `GET /api/cask-metadata/classifications` as source of truth. |
 | **viewCount** | Tracked at variant level via `POST /api/casks/{id}/view`. Listing supports `sortBy=viewCount`. |
 | **Top Distilleries** | `GET /api/distilleries/top-ranked` sorts by cask count, NOT volume. A new endpoint is required for volume-based Top Distilleries features. |
 | **Explore Casks** | No existing curated-tab endpoints. All 4 tabs (Top Traded, Most Watched, Strategic Buy, New Listing) require new endpoints with a pre-computed stats table. |
